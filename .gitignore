@@ -1,0 +1,32 @@
+# Rust build output
+/target/
+
+# Jekyll build output
+/docs/_site/
+/docs/.jekyll-cache/
+/docs/Gemfile.lock
+
+# Local reference checkout for development only
+/GEOquery/
+
+# Cargo package artifacts
+*.crate
+
+# Local editor and OS files
+.DS_Store
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# Local environment files
+.env
+.env.*
+
+# GEO downloads and temporary analysis output
+*.soft
+*.soft.gz
+*.annot.gz
+*_series_matrix.txt.gz
+!/tests/fixtures/extdata/*.gz
+geoquery-rust-smoke-test/

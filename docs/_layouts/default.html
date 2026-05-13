@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% if page.title %}{{ page.title }} | {% endif %}{{ site.title }}</title>
+    <meta name="description" content="{{ page.description | default: site.description }}">
+    {% seo title=false %}
+    <link rel="stylesheet" href="{{ '/assets/css/styles.css' | relative_url }}">
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="wrap nav-wrap">
+        <a class="brand" href="{{ '/' | relative_url }}">
+          <span class="brand-mark">GEO</span>
+          <span>geoquery-rs</span>
+        </a>
+        <nav class="site-nav" aria-label="Primary navigation">
+          {% for item in site.data.nav %}
+            <a href="{{ item.url | relative_url }}" {% if page.url == item.url %}aria-current="page"{% endif %}>{{ item.title }}</a>
+          {% endfor %}
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      {% if page.hero %}
+        <section class="hero">
+          <div class="wrap hero-grid">
+            <div>
+              {% if page.eyebrow %}<p class="eyebrow">{{ page.eyebrow }}</p>{% endif %}
+              <h1>{{ page.hero_title | default: page.title }}</h1>
+              {% if page.hero_text %}<p class="lede">{{ page.hero_text }}</p>{% endif %}
+              <div class="actions">
+                <a class="button" href="{{ site.crate.docs_url }}">API docs on docs.rs</a>
+                <a class="button secondary" href="{{ '/getting-started/' | relative_url }}">Get started</a>
+              </div>
+            </div>
+            <div class="panel">
+<pre><code>cargo add geoquery-rs</code></pre>
+<pre><code>use geoquery::{get_geo, GEOObject, GetGeoOptions};
+
+let geo = get_geo(GetGeoOptions {
+    GEO: Some("GDS507"),
+    GSEMatrix: false,
+    ..Default::default()
+})?;</code></pre>
+            </div>
+          </div>
+        </section>
+      {% endif %}
+
+      <section class="content">
+        <div class="wrap">
+          {{ content }}
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="wrap footer-grid">
+        <div>
+          <strong>geoquery-rs</strong>
+          <p>Native Rust tooling for NCBI GEO data, inspired by the R/Bioconductor GEOquery package.</p>
+        </div>
+        <div class="footer-links">
+          <a href="{{ site.crate.docs_url }}">docs.rs</a>
+          <a href="{{ site.crate.crates_url }}">crates.io</a>
+          <a href="{{ site.crate.github_url }}">GitHub</a>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

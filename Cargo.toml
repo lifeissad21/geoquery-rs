@@ -1,0 +1,53 @@
+[package]
+name = "geoquery-rs"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+license = "MIT"
+description = "Native Rust rewrite of GEOquery for reading NCBI GEO SOFT, series matrix, and supplemental GEO resources."
+readme = "README.md"
+documentation = "https://docs.rs/geoquery-rs"
+homepage = "https://gpm.github.io/geoquery-rs/"
+repository = "https://github.com/gpm/geoquery-rs"
+keywords = ["geo", "geoquery", "ncbi", "bioinformatics", "bioconductor"]
+categories = ["science", "parser-implementations", "api-bindings"]
+default-run = "geoquery"
+exclude = [
+    ".github/**",
+    ".zed/**",
+    "GEOquery/**",
+    "docs/.jekyll-cache/**",
+    "docs/Gemfile.lock",
+    "docs/_site/**",
+    "target/**",
+]
+
+[package.metadata.usage]
+library_crate = "geoquery"
+install = "cargo add geoquery-rs"
+run_from_source = "cargo run -- GDS507"
+run_installed_binary = "cargo install geoquery-rs && geoquery GDS507"
+test_local = "cargo test"
+test_live_geo = "cargo test -- --ignored"
+docs = "cargo doc --no-deps --open"
+homepage = "https://gpm.github.io/geoquery-rs/"
+repository = "https://github.com/gpm/geoquery-rs"
+
+[lib]
+name = "geoquery"
+path = "src/lib.rs"
+
+[[bin]]
+name = "geoquery"
+path = "src/main.rs"
+
+[dependencies]
+csv = "1.3"
+flate2 = "1.0"
+regex = "1.10"
+reqwest = { version = "0.12", features = ["blocking", "rustls-tls"], default-features = false }
+thiserror = "1.0"
+url = "2.5"
+
+[dev-dependencies]
+tempfile = "3.10"

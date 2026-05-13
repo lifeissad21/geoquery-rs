@@ -1,0 +1,30 @@
+title: geoquery-rs
+description: Native Rust access to NCBI Gene Expression Omnibus data.
+url: "https://gpm.github.io"
+baseurl: "/geoquery-rs"
+repository: "gpm/geoquery-rs"
+
+theme: minima
+
+plugins:
+  - jekyll-seo-tag
+  - jekyll-sitemap
+
+markdown: kramdown
+highlighter: rouge
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - _site
+
+crate:
+  package: geoquery-rs
+  library: geoquery
+  binary: geoquery
+  docs_url: https://docs.rs/geoquery-rs
+  crates_url: https://crates.io/crates/geoquery-rs
+  github_url: https://github.com/gpm/geoquery-rs
