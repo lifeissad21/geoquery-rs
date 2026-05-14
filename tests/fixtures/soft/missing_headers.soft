@@ -1,0 +1,7 @@
+^SERIES = GSELOCAL_MISSING_HEADERS
+^SAMPLE = GSMLOCAL1
+!Sample_geo_accession = GSMLOCAL1
+!sample_table_begin
+ID_REF	VALUE
+1007_s_at	1.0
+!sample_table_end

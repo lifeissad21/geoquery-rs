@@ -139,6 +139,41 @@ fn main() -> geoquery::Result<()> {
 }
 ```
 
+## Join GPL platform annotations
+
+```rust
+use geoquery::{join_gpl_annotations, parse_gse_matrix, parseGPL};
+
+fn main() -> geoquery::Result<()> {
+    let eset = parse_gse_matrix("GSE2553_series_matrix.txt.gz")?;
+    let gpl = parseGPL("GPL570.annot.gz")?;
+    let annotated = join_gpl_annotations(&eset, &gpl)?;
+
+    println!("feature annotations: {}", annotated.featureData.ncol());
+    Ok(())
+}
+```
+
+## Read typed table columns
+
+```rust
+use geoquery::{DataFrame, TypedColumn};
+
+fn main() {
+    let df = DataFrame::new(
+        vec!["probe".into(), "count".into()],
+        vec![
+            vec![Some("1007_s_at".into()), Some("12".into())],
+            vec![Some("117_at".into()), Some("15".into())],
+        ],
+    );
+
+    if let Some(TypedColumn::Integer(counts)) = df.typed_column("count") {
+        println!("first count: {:?}", counts[0]);
+    }
+}
+```
+
 ## Search GEO
 
 ```rust

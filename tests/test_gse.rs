@@ -411,10 +411,16 @@ fn local_gse_matrix_expands_characteristics() {
     };
     let eset = esets.first().expect("local matrix should produce one eset");
     assert_eq!((eset.nrow(), eset.ncol()), (2, 2));
-    assert_eq!(eset.phenoData.get(0, "tissue:ch1"), Some("liver"));
-    assert_eq!(eset.phenoData.get(1, "tissue:ch1"), Some("brain"));
     assert_eq!(
-        eset.phenoData.get(0, "age:ch1"),
+        eset.phenoData.get(0, "tissue:ch1").as_deref(),
+        Some("liver")
+    );
+    assert_eq!(
+        eset.phenoData.get(1, "tissue:ch1").as_deref(),
+        Some("brain")
+    );
+    assert_eq!(
+        eset.phenoData.get(0, "age:ch1").as_deref(),
         Some("10;12"),
         "Repeated characteristics should collapse per sample with semicolons"
     );

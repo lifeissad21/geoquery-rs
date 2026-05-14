@@ -1,0 +1,10 @@
+^PLATFORM = GPLLOCAL_DUP
+!Platform_geo_accession = GPLLOCAL_DUP
+#ID = Probe identifier
+#Gene Symbol = Gene symbol
+!platform_table_begin
+ID	Gene Symbol	ENTREZ_GENE_ID	Gene Title	RefSeq
+1007_s_at	DDR1	780	discoidin domain receptor	NM_001954
+1007_s_at	DDR1_DUP	780	duplicate probe	NM_001954
+117_at	HSPA6	3310	heat shock protein	
+!platform_table_end

@@ -1,8 +1,8 @@
 title: geoquery-rs
 description: Native Rust access to NCBI Gene Expression Omnibus data.
-url: "https://gpm.github.io"
+url: "https://lifeissad21.github.io"
 baseurl: "/geoquery-rs"
-repository: "gpm/geoquery-rs"
+repository: "lifeissad21/geoquery-rs"
 
 theme: minima
 
@@ -27,4 +27,4 @@ crate:
   binary: geoquery
   docs_url: https://docs.rs/geoquery-rs
   crates_url: https://crates.io/crates/geoquery-rs
-  github_url: https://github.com/gpm/geoquery-rs
+  github_url: https://github.com/lifeissad21/geoquery-rs

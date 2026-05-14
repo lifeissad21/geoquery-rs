@@ -102,18 +102,31 @@ pub fn readRNAQuantRawCounts(link: &str) -> Result<NumericMatrix> {
     let lines = text.lines().map(String::from).collect::<Vec<_>>();
     let table = parse_tsv_lines(&lines)?;
     let row_names = table
-        .rows
-        .iter()
-        .filter_map(|row| row.first().and_then(|value| value.clone()))
-        .collect::<Vec<_>>();
-    let column_names = table.columns.iter().skip(1).cloned().collect::<Vec<_>>();
-    let values = table
-        .rows
+        .column_values(
+            table
+                .column_names()
+                .first()
+                .map(String::as_str)
+                .unwrap_or_default(),
+        )
+        .unwrap_or_default()
         .into_iter()
-        .map(|row| {
-            row.into_iter()
-                .skip(1)
-                .map(|value| value.and_then(|v| v.parse::<f64>().ok()))
+        .flatten()
+        .collect::<Vec<_>>();
+    let column_names = table
+        .column_names()
+        .iter()
+        .skip(1)
+        .cloned()
+        .collect::<Vec<_>>();
+    let values = (0..table.nrow())
+        .map(|row_idx| {
+            (1..table.ncol())
+                .map(|col_idx| {
+                    table
+                        .get_by_index(row_idx, col_idx)
+                        .and_then(|v| v.parse::<f64>().ok())
+                })
                 .collect()
         })
         .collect();

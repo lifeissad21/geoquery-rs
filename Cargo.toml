@@ -7,8 +7,8 @@ license = "MIT"
 description = "Native Rust rewrite of GEOquery for reading NCBI GEO SOFT, series matrix, and supplemental GEO resources."
 readme = "README.md"
 documentation = "https://docs.rs/geoquery-rs"
-homepage = "https://gpm.github.io/geoquery-rs/"
-repository = "https://github.com/gpm/geoquery-rs"
+homepage = "https://lifeissad21.github.io/geoquery-rs/"
+repository = "https://github.com/lifeissad21/geoquery-rs"
 keywords = ["geo", "geoquery", "ncbi", "bioinformatics", "bioconductor"]
 categories = ["science", "parser-implementations", "api-bindings"]
 default-run = "geoquery"
@@ -30,8 +30,8 @@ run_installed_binary = "cargo install geoquery-rs && geoquery GDS507"
 test_local = "cargo test"
 test_live_geo = "cargo test -- --ignored"
 docs = "cargo doc --no-deps --open"
-homepage = "https://gpm.github.io/geoquery-rs/"
-repository = "https://github.com/gpm/geoquery-rs"
+homepage = "https://lifeissad21.github.io/geoquery-rs/"
+repository = "https://github.com/lifeissad21/geoquery-rs"
 
 [lib]
 name = "geoquery"

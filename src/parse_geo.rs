@@ -134,6 +134,66 @@ fn split_on_first<'a>(x: &'a str, pat: &str) -> Option<(&'a str, &'a str)> {
     Some((&x[..idx], &x[(idx + pat.len())..]))
 }
 
+/// Parse a GEO sample characteristic string into key/value pairs.
+///
+/// GEO submitters use several characteristic forms, including repeated
+/// `key: value` fields, semicolon-collapsed values, and mixed `:` / `=`
+/// delimiters. This parser recovers every recognizable pair and stores
+/// unkeyed tokens as `characteristic_N`.
+///
+/// ```
+/// let parsed = geoquery::parse_characteristics("disease:control;sex=male");
+/// assert_eq!(parsed.get("disease").map(String::as_str), Some("control"));
+/// assert_eq!(parsed.get("sex").map(String::as_str), Some("male"));
+///
+/// let parsed = geoquery::parse_characteristics("male");
+/// assert_eq!(parsed.get("characteristic_1").map(String::as_str), Some("male"));
+/// ```
+pub fn parse_characteristics(value: &str) -> BTreeMap<String, String> {
+    let mut parsed: BTreeMap<String, String> = BTreeMap::new();
+    let mut unknown_count = 0usize;
+    let tokens = value.split([';', '|']).map(str::trim).collect::<Vec<_>>();
+    let tokens = if tokens.is_empty() {
+        vec![value]
+    } else {
+        tokens
+    };
+
+    for token in tokens {
+        let token = token.trim().trim_matches('"').trim();
+        let pair = split_on_first(token, ":")
+            .or_else(|| split_on_first(token, "="))
+            .and_then(|(key, value)| {
+                let key = key.trim();
+                if key.is_empty() {
+                    None
+                } else {
+                    Some((key, value.trim()))
+                }
+            });
+
+        if let Some((key, value)) = pair {
+            parsed
+                .entry(key.to_string())
+                .and_modify(|existing| {
+                    if !existing.is_empty() && !value.is_empty() {
+                        existing.push(';');
+                    }
+                    existing.push_str(value);
+                })
+                .or_insert_with(|| value.to_string());
+        } else {
+            unknown_count += 1;
+            parsed.insert(format!("characteristic_{unknown_count}"), token.to_string());
+        }
+    }
+
+    if parsed.is_empty() {
+        parsed.insert("characteristic_1".to_string(), String::new());
+    }
+    parsed
+}
+
 pub(crate) fn parseGeoColumns(txt: &[String]) -> DataFrame {
     let mut rows = Vec::new();
     for line in txt.iter().filter(|line| line.starts_with('#')) {
@@ -148,14 +208,14 @@ pub(crate) fn parseGeoColumns(txt: &[String]) -> DataFrame {
 }
 
 fn apply_column_descriptions(mut table: DataFrame, descriptions: &DataFrame) -> DataFrame {
-    for row in &descriptions.rows {
-        let Some(Some(column)) = row.first() else {
+    for row_idx in 0..descriptions.nrow() {
+        let Some(column) = descriptions.get(row_idx, "Column") else {
             continue;
         };
-        let Some(Some(description)) = row.get(1) else {
+        let Some(description) = descriptions.get(row_idx, "Description") else {
             continue;
         };
-        table.set_column_metadata(column.clone(), description.clone());
+        table.set_column_metadata(column, description);
     }
     table
 }
@@ -276,7 +336,7 @@ pub(crate) fn parse_tsv_lines(lines: &[String]) -> Result<DataFrame> {
         let mut row = record
             .iter()
             .map(|value| {
-                if NA_STRINGS.contains(&value) {
+                if value.trim().is_empty() || NA_STRINGS.contains(&value) {
                     None
                 } else {
                     Some(value.to_string())
@@ -400,9 +460,10 @@ pub(crate) fn parseGSEMatrix_lines(lines: &[String]) -> Result<ExpressionSet> {
     let data = parse_tsv_lines(&lines[(table_begin + 1)..table_end])?;
 
     let mut exprs = Vec::new();
-    for row in &data.rows {
-        let values = row
-            .iter()
+    for row_idx in 0..data.nrow() {
+        let values = data
+            .row_values(row_idx)
+            .into_iter()
             .skip(1)
             .map(|v| v.as_deref().and_then(|txt| txt.parse::<f64>().ok()))
             .collect::<Vec<_>>();
@@ -411,14 +472,21 @@ pub(crate) fn parseGSEMatrix_lines(lines: &[String]) -> Result<ExpressionSet> {
 
     let annotation = phenoData
         .column_index("platform_id")
-        .and_then(|idx| phenoData.rows.first()?.get(idx)?.clone());
+        .and_then(|idx| phenoData.get_by_index(0, idx));
 
     let feature_names = data
-        .rows
-        .iter()
-        .filter_map(|row| row.first().and_then(|value| value.clone()))
+        .column_values("ID_REF")
+        .or_else(|| data.column_values("ID"))
+        .unwrap_or_default()
+        .into_iter()
+        .flatten()
         .collect::<Vec<_>>();
-    let sample_names = data.columns.iter().skip(1).cloned().collect::<Vec<_>>();
+    let sample_names = data
+        .column_names()
+        .iter()
+        .skip(1)
+        .cloned()
+        .collect::<Vec<_>>();
     let featureData = DataFrame::empty_with_row_names(feature_names.clone());
     Ok(ExpressionSet {
         exprs: NumericMatrix::new(exprs, feature_names.clone(), sample_names.clone()),
@@ -498,8 +566,8 @@ fn make_unique(columns: Vec<String>) -> Vec<String> {
 }
 
 fn expand_characteristics(mut df: DataFrame) -> Result<DataFrame> {
-    let characteristic_indices = df
-        .columns
+    let column_names = df.column_names().to_vec();
+    let characteristic_indices = column_names
         .iter()
         .enumerate()
         .filter_map(|(idx, column)| column.starts_with("characteristics_ch").then_some(idx))
@@ -510,41 +578,33 @@ fn expand_characteristics(mut df: DataFrame) -> Result<DataFrame> {
 
     let mut expanded: BTreeMap<String, Vec<Option<String>>> = BTreeMap::new();
     for idx in characteristic_indices {
-        let channel = if df.columns[idx].contains("_ch2") {
+        let channel = if column_names[idx].contains("_ch2") {
             "ch2"
         } else {
             "ch1"
         };
-        for (row_idx, row) in df.rows.iter().enumerate() {
-            let Some(Some(value)) = row.get(idx) else {
+        for row_idx in 0..df.nrow() {
+            let Some(value) = df.get_by_index(row_idx, idx) else {
                 continue;
             };
-            let Some((key, parsed_value)) = split_on_first(value, ":") else {
-                continue;
-            };
-            let key = key.trim();
-            let parsed_value = parsed_value.trim();
-            if key.is_empty() || parsed_value.is_empty() {
-                continue;
+            for (key, parsed_value) in parse_characteristics(&value) {
+                let column = format!("{key}:{channel}");
+                let values = expanded
+                    .entry(column)
+                    .or_insert_with(|| vec![None; df.nrow()]);
+                values[row_idx] = match &values[row_idx] {
+                    Some(existing) if !existing.is_empty() && !parsed_value.is_empty() => {
+                        Some(format!("{existing};{parsed_value}"))
+                    }
+                    Some(existing) if !existing.is_empty() => Some(existing.clone()),
+                    _ => Some(parsed_value),
+                };
             }
-            let column = format!("{key}:{channel}");
-            let values = expanded
-                .entry(column)
-                .or_insert_with(|| vec![None; df.rows.len()]);
-            values[row_idx] = match &values[row_idx] {
-                Some(existing) if !existing.is_empty() => {
-                    Some(format!("{existing};{parsed_value}"))
-                }
-                _ => Some(parsed_value.to_string()),
-            };
         }
     }
 
     for (column, values) in expanded {
-        df.columns.push(column);
-        for (row, value) in df.rows.iter_mut().zip(values.into_iter()) {
-            row.push(value);
-        }
+        df.push_column(column, values);
     }
 
     Ok(df)

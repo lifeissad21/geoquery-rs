@@ -69,6 +69,8 @@ pub enum GEOObject {
 | `downloadFile(url, destfile, mode_binary)` | Download a URL into a local file. |
 | `parse_geo(...)` | Snake-case alias for local GEO parsing. |
 | `parseGEO(...)` | Infer and parse a local GEO SOFT or matrix file. |
+| `parse_gse(fname, gse_limits)` | Snake-case alias for full GSE SOFT parsing. |
+| `parse_gse_matrix(fname)` | Snake-case alias for GSE series matrix parsing. |
 
 ## Local parsers
 
@@ -98,7 +100,9 @@ pub enum GEOObject {
 | Type | Description |
 | --- | --- |
 | `Header` | `BTreeMap<String, Vec<String>>` for GEO metadata. |
-| `DataFrame` | String-backed table with optional row names and column metadata. |
+| `DataFrame` | Schema-aware typed table with optional row names and column metadata. |
+| `ColumnData` | Internal typed column storage: `Int`, `Float`, `Text`, or `Mixed`. |
+| `Value` | Scalar value used in mixed typed columns. |
 | `TypedColumn` | Typed view over a `DataFrame` column: `Integer`, `Float`, or `Text`. |
 | `NumericMatrix` | Row-major matrix with optional `f64` values and row/column names. |
 
@@ -118,7 +122,7 @@ pub enum GEOObject {
 
 | Type | Methods |
 | --- | --- |
-| `DataFrame` | `new`, `with_row_names`, `empty_with_row_names`, `empty`, `nrow`, `ncol`, `column_index`, `get`, `row_name`, `typed_column`, `set_column_metadata` |
+| `DataFrame` | `new`, `with_row_names`, `empty_with_row_names`, `empty`, `nrow`, `ncol`, `column_index`, `column_names`, `get`, `get_by_index`, `row_values`, `column_values`, `row_name`, `typed_column`, `column_data`, `set_column_metadata` |
 | `NumericMatrix` | `new`, `nrow`, `ncol`, `get`, `row_name`, `column_name` |
 | `GDS`, `GPL`, `GSM`, `GEOData` | `meta`, `data_table`, `table`, `columns`, `accession` |
 | `GSE` | `meta`, `gsm_list`, `gpl_list` |
@@ -147,6 +151,9 @@ pub enum GEOObject {
 | `gds_to_ma(gds, do_log2)` | Snake-case alias for `GDS2MA`. |
 | `GDS2eSet(gds, do_log2)` | Convert a `GDS` to `ExpressionSet`. |
 | `gds_to_expression_set(gds, do_log2)` | Snake-case alias for `GDS2eSet`. |
+| `join_gpl_annotations(expression, gpl)` | Join GPL platform annotations into `ExpressionSet.featureData` by probe ID. |
+| `join_gpl_annotations_by_key(expression, gpl, key)` | Join GPL annotations using `AnnotationKey`. |
+| `AnnotationKey` | Annotation join key: `ProbeId`, `GeneSymbol`, `Entrez`, or `Custom(String)`. |
 
 ## Supplemental files
 
@@ -174,6 +181,7 @@ pub enum GEOObject {
 | `readRNAQuantRawCounts(link)` | Read raw counts TSV/TSV.GZ into `NumericMatrix`. |
 | `getRNASeqQuantResults(gse)` | Fetch raw counts and annotation. |
 | `getRNASeqData(gse)` | Build a `SummarizedExperiment`. |
+| `get_rna_seq_data(gse)` | Snake-case alias for `getRNASeqData`. |
 | `hasRNASeqQuantifications(accession)` | Test whether a GSE exposes raw-count files. |
 
 ## Search
@@ -195,8 +203,19 @@ Most functions return `geoquery::Result<T>`, an alias for `std::result::Result<T
 | `UnknownEntity` | Parser could not infer GEO entity type. |
 | `EntityMismatch` | Parser expected one entity but found another. |
 | `NoMatrixFiles` | GSE matrix directory had no matrix files. |
+| `MissingMatrix` | A matrix was required but absent. |
 | `NoSupplementalFiles` | Supplemental directory had no matching files. |
+| `MissingSupplemental` | A supplemental resource was required but absent. |
 | `MissingField` | Required GEO metadata field was absent. |
+| `InvalidCharacteristic` | Strict characteristic parsing context identified invalid input. |
+| `GPLJoinFailure` | GPL annotation joining failed. |
+| `AnnotationMissing` | A requested annotation column was missing. |
+| `DuplicateFeature` | A duplicate feature was encountered where uniqueness was required. |
+| `InvalidSOFTStructure` | SOFT structure was invalid. |
+| `InvalidGSEMatrix` | GSE matrix structure was invalid. |
+| `InvalidRNASeqCounts` | RNA-seq counts structure was invalid. |
+| `NetworkFailure` | Network failure with additional GEO context and source error. |
+| `ParseFailure` | Parse failure with preserved source context. |
 | `Parse` | Text/table parser failure. |
 | `Network` | HTTP failure from `reqwest`. |
 | `Io` | Filesystem I/O failure. |

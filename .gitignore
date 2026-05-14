@@ -29,4 +29,6 @@
 *.annot.gz
 *_series_matrix.txt.gz
 !/tests/fixtures/extdata/*.gz
+!/tests/fixtures/**/*.gz
+!/tests/fixtures/**/*.soft
 geoquery-rust-smoke-test/

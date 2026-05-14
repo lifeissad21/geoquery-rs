@@ -8,9 +8,9 @@ fn search_fields_returns_expected_columns() {
     });
     for expected in ["Name", "Description", "FullName"] {
         assert!(
-            result.columns.contains(&expected.to_string()),
+            result.column_names().contains(&expected.to_string()),
             "searchFieldsGEO result missing expected column `{expected}`. Columns returned: {:?}",
-            result.columns
+            result.column_names()
         );
     }
 }

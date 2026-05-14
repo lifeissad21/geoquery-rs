@@ -6,6 +6,8 @@
   url: /api/
 - title: Examples
   url: /examples/
+- title: Cookbook
+  url: /cookbook/
 - title: R Mapping
   url: /r-mapping/
 - title: Publishing

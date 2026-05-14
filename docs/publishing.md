@@ -31,6 +31,9 @@ cargo package --list --allow-dirty --offline
 cargo package --allow-dirty --offline
 ```
 
+The GitHub Actions `Cargo checks` workflow runs `cargo fmt --check` and
+`cargo test` on pushes, pull requests, and manual dispatches.
+
 Run live GEO tests when network access is available:
 
 ```sh
@@ -57,7 +60,7 @@ This Jekyll site lives in `docs/`.
 4. Select the default branch and the `/docs` folder.
 5. Save the settings.
 
-The homepage metadata in `Cargo.toml` currently points to `https://gpm.github.io/geoquery-rs/`. Update `homepage`, `repository`, and `docs/_config.yml` if the GitHub owner or repository name differs.
+The homepage metadata in `Cargo.toml` currently points to `https://lifeissad21.github.io/geoquery-rs/`. Update `homepage`, `repository`, and `docs/_config.yml` if the GitHub owner or repository name differs.
 
 ## Preview this site locally
 

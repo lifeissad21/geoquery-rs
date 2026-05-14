@@ -1,0 +1,4 @@
+^DATASET = GDSLOCAL_TRUNCATED
+!dataset_table_begin
+ID_REF	GSMLOCAL1
+1007_s_at	1.0

@@ -63,11 +63,12 @@ fn print_table_head(table: &geoquery::classes::DataFrame, rows: usize) {
         return;
     }
 
-    println!("{}", table.columns.join("\t"));
-    for row in table.rows.iter().take(rows) {
-        let values = row
-            .iter()
-            .map(|value| value.as_deref().unwrap_or("NA"))
+    println!("{}", table.column_names().join("\t"));
+    for row_idx in 0..table.nrow().min(rows) {
+        let values = table
+            .row_values(row_idx)
+            .into_iter()
+            .map(|value| value.unwrap_or_else(|| "NA".to_string()))
             .collect::<Vec<_>>();
         println!("{}", values.join("\t"));
     }

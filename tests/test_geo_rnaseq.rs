@@ -243,7 +243,7 @@ fn local_gzipped_rnaseq_files_parse_without_network() {
     )
     .unwrap_or_else(|err| panic!("local gzipped annotation should parse: {err}"));
     assert_eq!((annotation.nrow(), annotation.ncol()), (2, 3));
-    assert_eq!(annotation.get(0, "Symbol"), Some("A"));
+    assert_eq!(annotation.get(0, "Symbol").as_deref(), Some("A"));
 }
 
 fn write_gzip_tsv(path: &std::path::Path, body: &str) {

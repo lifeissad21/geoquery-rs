@@ -1,0 +1,15 @@
+!Series_title	"Local malformed characteristics fixture"
+!Series_geo_accession	"GSELOCAL"
+!Sample_title	"sample 1"	"sample 2"
+!Sample_geo_accession	"GSMLOCAL1"	"GSMLOCAL2"
+!Sample_platform_id	"GPLLOCAL"	"GPLLOCAL"
+!Sample_characteristics_ch1	"disease:control;sex:male"	"disease: case | sex=female"
+!Sample_characteristics_ch1	"age: 65"	"age:72"
+!Sample_characteristics_ch1	"unstructured note"	"disease-control"
+!Sample_characteristics_ch1	""	""
+!series_matrix_table_begin
+ID_REF	GSMLOCAL1	GSMLOCAL2
+1007_s_at	1.0	2.0
+1053_at	3.0	4.0
+117_at	5.0	6.0
+!series_matrix_table_end

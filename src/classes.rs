@@ -65,29 +65,161 @@ fn first_header_value(header: &Header, key: &str) -> Option<String> {
     header.get(key).and_then(|values| values.first()).cloned()
 }
 
-/// Simple string-backed tabular data frame used throughout the crate.
+/// Cell value used by schema-aware mixed data frame columns.
+#[derive(Clone, Debug, PartialEq)]
+pub enum Value {
+    /// Signed integer value.
+    Int(i64),
+    /// Floating-point value.
+    Float(f64),
+    /// Text value.
+    Text(String),
+}
+
+/// Inferred storage for a data frame column.
+#[derive(Clone, Debug, PartialEq)]
+pub enum ColumnData {
+    /// Column values inferred as signed integers.
+    Int(Vec<Option<i64>>),
+    /// Column values inferred as floating-point numbers.
+    Float(Vec<Option<f64>>),
+    /// Column values kept as text.
+    Text(Vec<Option<String>>),
+    /// Column values with heterogeneous scalar types.
+    Mixed(Vec<Option<Value>>),
+}
+
+impl ColumnData {
+    fn from_strings(values: Vec<Option<String>>) -> Self {
+        let non_missing = values.iter().flatten().collect::<Vec<_>>();
+        if non_missing.is_empty() {
+            return Self::Text(values);
+        }
+
+        if non_missing.iter().all(|value| value.parse::<i64>().is_ok()) {
+            return Self::Int(
+                values
+                    .into_iter()
+                    .map(|value| value.and_then(|v| v.parse::<i64>().ok()))
+                    .collect(),
+            );
+        }
+
+        if non_missing.iter().all(|value| value.parse::<f64>().is_ok()) {
+            return Self::Float(
+                values
+                    .into_iter()
+                    .map(|value| value.and_then(|v| v.parse::<f64>().ok()))
+                    .collect(),
+            );
+        }
+
+        Self::Text(values)
+    }
+
+    fn to_strings(&self) -> Vec<Option<String>> {
+        match self {
+            Self::Int(values) => values
+                .iter()
+                .map(|value| value.map(|v| v.to_string()))
+                .collect(),
+            Self::Float(values) => values
+                .iter()
+                .map(|value| value.map(|v| v.to_string()))
+                .collect(),
+            Self::Text(values) => values.clone(),
+            Self::Mixed(values) => values
+                .iter()
+                .map(|value| match value {
+                    Some(Value::Int(v)) => Some(v.to_string()),
+                    Some(Value::Float(v)) => Some(v.to_string()),
+                    Some(Value::Text(v)) => Some(v.clone()),
+                    None => None,
+                })
+                .collect(),
+        }
+    }
+
+    /// Number of rows in this column.
+    pub fn len(&self) -> usize {
+        match self {
+            Self::Int(values) => values.len(),
+            Self::Float(values) => values.len(),
+            Self::Text(values) => values.len(),
+            Self::Mixed(values) => values.len(),
+        }
+    }
+
+    /// Return whether the column has no rows.
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    /// Return a string representation of a cell.
+    pub fn get_string(&self, row: usize) -> Option<String> {
+        match self {
+            Self::Int(values) => values
+                .get(row)
+                .and_then(|value| value.map(|v| v.to_string())),
+            Self::Float(values) => values
+                .get(row)
+                .and_then(|value| value.map(|v| v.to_string())),
+            Self::Text(values) => values.get(row).cloned().flatten(),
+            Self::Mixed(values) => values.get(row).and_then(|value| match value {
+                Some(Value::Int(v)) => Some(v.to_string()),
+                Some(Value::Float(v)) => Some(v.to_string()),
+                Some(Value::Text(v)) => Some(v.clone()),
+                None => None,
+            }),
+        }
+    }
+}
+
+/// Simple tabular data frame used throughout the crate.
 ///
 /// GEO files often mix text and numeric columns, and some downstream callers
 /// need exact text preservation. Use [`DataFrame::typed_column`] when a numeric
 /// view is needed.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, Default)]
 pub struct DataFrame {
-    /// Column names in display/storage order.
-    pub columns: Vec<String>,
-    /// Row values. `None` represents missing values such as `NA` or `NULL`.
-    pub rows: Vec<Vec<Option<String>>>,
+    /// Schema-aware column storage.
+    pub data: BTreeMap<String, ColumnData>,
+    column_order: Vec<String>,
+    nrows: usize,
     /// Optional row names.
     pub row_names: Vec<String>,
     /// Per-column descriptions parsed from GEO `#COLUMN = description` lines.
     pub column_metadata: BTreeMap<String, String>,
 }
 
+impl PartialEq for DataFrame {
+    fn eq(&self, other: &Self) -> bool {
+        self.column_order == other.column_order
+            && self.data == other.data
+            && self.nrows == other.nrows
+            && self.row_names == other.row_names
+            && self.column_metadata == other.column_metadata
+    }
+}
+
+impl Eq for DataFrame {}
+
 impl DataFrame {
     /// Create a data frame from column names and rows.
     pub fn new(columns: Vec<String>, rows: Vec<Vec<Option<String>>>) -> Self {
+        let nrows = rows.len();
+        let mut data = BTreeMap::new();
+        for (idx, column) in columns.iter().enumerate() {
+            let values = rows
+                .iter()
+                .map(|row| row.get(idx).cloned().unwrap_or(None))
+                .collect::<Vec<_>>();
+            data.insert(column.clone(), ColumnData::from_strings(values));
+        }
         Self {
-            columns,
-            rows,
+            data,
+            column_order: columns,
+            nrows,
             row_names: Vec::new(),
             column_metadata: BTreeMap::new(),
         }
@@ -99,9 +231,21 @@ impl DataFrame {
         rows: Vec<Vec<Option<String>>>,
         row_names: Vec<String>,
     ) -> Self {
+        let nrows = rows.len().max(row_names.len());
+        let mut normalized_rows = rows;
+        normalized_rows.resize_with(nrows, Vec::new);
+        let mut data = BTreeMap::new();
+        for (idx, column) in columns.iter().enumerate() {
+            let values = normalized_rows
+                .iter()
+                .map(|row| row.get(idx).cloned().unwrap_or(None))
+                .collect::<Vec<_>>();
+            data.insert(column.clone(), ColumnData::from_strings(values));
+        }
         Self {
-            columns,
-            rows,
+            data,
+            column_order: columns,
+            nrows,
             row_names,
             column_metadata: BTreeMap::new(),
         }
@@ -110,8 +254,9 @@ impl DataFrame {
     /// Create an empty-column data frame with one row per row name.
     pub fn empty_with_row_names(row_names: Vec<String>) -> Self {
         Self {
-            columns: Vec::new(),
-            rows: vec![Vec::new(); row_names.len()],
+            data: BTreeMap::new(),
+            column_order: Vec::new(),
+            nrows: row_names.len(),
             row_names,
             column_metadata: BTreeMap::new(),
         }
@@ -124,23 +269,62 @@ impl DataFrame {
 
     /// Number of rows.
     pub fn nrow(&self) -> usize {
-        self.rows.len()
+        self.nrows
     }
 
     /// Number of columns.
     pub fn ncol(&self) -> usize {
-        self.columns.len()
+        self.column_order.len()
     }
 
     /// Return the zero-based index for a column name.
     pub fn column_index(&self, name: &str) -> Option<usize> {
-        self.columns.iter().position(|col| col == name)
+        self.column_order.iter().position(|col| col == name)
     }
 
-    /// Return a cell by row index and column name.
-    pub fn get(&self, row: usize, column: &str) -> Option<&str> {
-        let idx = self.column_index(column)?;
-        self.rows.get(row)?.get(idx)?.as_deref()
+    /// Return column names in display/storage order.
+    pub fn column_names(&self) -> &[String] {
+        &self.column_order
+    }
+
+    /// Return an owned cell value by row index and column name.
+    pub fn get(&self, row: usize, column: &str) -> Option<String> {
+        self.data.get(column)?.get_string(row)
+    }
+
+    /// Return an owned cell value by row index and column index.
+    pub fn get_by_index(&self, row: usize, column: usize) -> Option<String> {
+        let column = self.column_order.get(column)?;
+        self.data.get(column)?.get_string(row)
+    }
+
+    /// Return a row reconstructed from typed column storage.
+    pub fn row_values(&self, row: usize) -> Vec<Option<String>> {
+        self.column_order
+            .iter()
+            .map(|column| {
+                self.data
+                    .get(column)
+                    .and_then(|column_data| column_data.get_string(row))
+            })
+            .collect()
+    }
+
+    /// Return a column reconstructed as strings.
+    pub fn column_values(&self, column: &str) -> Option<Vec<Option<String>>> {
+        self.data.get(column).map(ColumnData::to_strings)
+    }
+
+    /// Deprecated compatibility helper for callers that still need row-oriented data.
+    #[deprecated(note = "use typed column storage through DataFrame::data or column_values")]
+    pub fn rows(&self) -> Vec<Vec<Option<String>>> {
+        (0..self.nrow()).map(|idx| self.row_values(idx)).collect()
+    }
+
+    /// Deprecated compatibility helper for callers that still need the old column vector.
+    #[deprecated(note = "use column_names() or typed column storage through DataFrame::data")]
+    pub fn columns(&self) -> &[String] {
+        self.column_names()
     }
 
     /// Return a row name by zero-based row index.
@@ -150,13 +334,27 @@ impl DataFrame {
 
     /// Return a typed view of a column when all non-missing values parse.
     pub fn typed_column(&self, column: &str) -> Option<TypedColumn> {
-        let idx = self.column_index(column)?;
-        let values = self
-            .rows
-            .iter()
-            .map(|row| row.get(idx).and_then(|value| value.clone()))
-            .collect::<Vec<_>>();
-        Some(TypedColumn::from_strings(values))
+        if let Some(column_data) = self.data.get(column) {
+            return Some(TypedColumn::from_column_data(column_data));
+        }
+        None
+    }
+
+    /// Return inferred storage for a column.
+    pub fn column_data(&self, column: &str) -> Option<&ColumnData> {
+        self.data.get(column)
+    }
+
+    /// Append a column and keep row-oriented compatibility storage in sync.
+    pub fn push_column(&mut self, column: impl Into<String>, values: Vec<Option<String>>) {
+        let column = column.into();
+        let target_rows = self.nrows.max(values.len());
+        let mut stored_values = values;
+        stored_values.resize(target_rows, None);
+        self.nrows = target_rows;
+        self.column_order.push(column.clone());
+        self.data
+            .insert(column, ColumnData::from_strings(stored_values));
     }
 
     /// Store a human-readable description for a column.
@@ -208,6 +406,20 @@ impl TypedColumn {
             );
         }
         Self::Text(values)
+    }
+
+    fn from_column_data(column_data: &ColumnData) -> Self {
+        match column_data {
+            ColumnData::Int(values) => Self::Integer(values.clone()),
+            ColumnData::Float(values) => Self::Float(values.clone()),
+            ColumnData::Text(values) => Self::from_strings(values.clone()),
+            ColumnData::Mixed(values) => Self::Text(
+                ColumnData::Mixed(values.clone())
+                    .to_strings()
+                    .into_iter()
+                    .collect(),
+            ),
+        }
     }
 }
 

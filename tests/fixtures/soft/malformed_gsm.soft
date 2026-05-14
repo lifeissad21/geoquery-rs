@@ -1,0 +1,9 @@
+^SAMPLE = GSMLOCAL_BAD
+!Sample_title = Malformed GSM fixture
+!Sample_geo_accession = GSMLOCAL_BAD
+!Sample_characteristics_ch1 = male
+!Sample_characteristics_ch1 = disease-control
+!sample_table_begin
+ID_REF	VALUE
+1007_s_at	1.0
+!sample_table_end
