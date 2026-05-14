@@ -62,6 +62,9 @@ This Jekyll site lives in `docs/`.
 
 The homepage metadata in `Cargo.toml` currently points to `https://lifeissad21.github.io/geoquery-rs/`. Update `homepage`, `repository`, and `docs/_config.yml` if the GitHub owner or repository name differs.
 
+The site uses `permalink: pretty` in `docs/_config.yml` so routes such as
+`/geoquery-rs/examples/` build as `examples/index.html` in the Pages artifact.
+
 ## Preview this site locally
 
 ```sh
